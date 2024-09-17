@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import os
 import tiktoken
 import pandas as pd
+import tqdm
 
 # note that this is in version openai==0.28, if you update to >=1.0.0, you need to create OpenAI() object.
 from openai.embeddings_utils import get_embedding
@@ -49,7 +50,7 @@ def section_to_embed(file_name: str):
 
     new_df_entries = []
 
-    import tqdm
+
     for _, row in tqdm.tqdm(df.iterrows()):
         section = row['section']
         n_tokens = len(encoding.encode(section))

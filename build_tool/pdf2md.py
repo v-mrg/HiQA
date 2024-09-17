@@ -247,7 +247,8 @@ def pdf2md(file_name):
 # running pdf2md to convert a pdf file to a well-structured markdown
 if __name__ == '__main__':
     start_time = time.time()
-    md = pdf2md('adc12dj5200se')
+    # TODO: change path
+    md = pdf2md('/home/wairimu/fcc_sec_47')
     # # save to local
     # with open('test.md', 'w', encoding='utf-8') as f:
     #     f.write(md)

@@ -9,3 +9,8 @@ numpy
 PyMuPDF
 python-dotenv
 pillow
+matplotlib
+plotly
+scipy
+scikit-learn
+tqdm
