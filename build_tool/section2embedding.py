@@ -5,16 +5,14 @@ import tiktoken
 import pandas as pd
 import tqdm
 
-# note that this is in version openai==0.28, if you update to >=1.0.0, you need to create OpenAI() object.
-from openai.embeddings_utils import get_embedding
+# # note that this is in version openai==0.28, if you update to >=1.0.0, you need to create OpenAI() object.
+# from openai.embeddings_utils import get_embedding
 
 embedding_model = "text-embedding-ada-002"
 embedding_encoding = "cl100k_base"  # this the encoding for text-embedding-ada-002
 # set openai
-os.environ["OPENAI_API_KEY"] = "yPKz6gw9KNVZd6oBFQ2AoZvosF3TvX6C3XJbADgahZYj3wZNHNuhRMoDG9pzpN98"
 os.environ["OPENAI_API_BASE"] = "https://ai.api.moblin.net/api/openai/v1"
-
-openai.api_key = os.environ.get('OPENAI_API_KEY')
+client = openai.OpenAI(api_key= os.getenv('OPENAI_API_KEY'))
 openai.api_base = os.environ.get('OPENAI_API_BASE')
 OPENAI_EMBEDDING_MAXTOKENS=8000
 def split_and_embed(section, encoding):
@@ -45,6 +43,10 @@ def section_to_embed(file_name: str):
     name = os.path.splitext(file_name)[0]
 
     # embed_path = os.path.join(BASE_DIR, 'file_system', kb_name, 'embedded')
+    print(directory)
+    print(os.getcwd())
+    print("Looking for file at:", os.path.abspath(directory))
+
     df = pd.read_csv(directory, encoding='utf-8')
     encoding = tiktoken.get_encoding(embedding_encoding)
 
@@ -91,19 +93,30 @@ def section_to_embed(file_name: str):
             # print('\n-------TABLE FOUND--------\n content:\n'+section+'\n metadata:\n'+metadata_content+'\n--------------------------\n')
 
             actual_section = section.replace('---table begin---', '').replace('---table end---', '')
-            new_df_entries.append({'section': actual_section, 'n_tokens': len(encoding.encode(metadata_content)), 'embedding': get_embedding(metadata_content, engine=embedding_model)})
+            response = client.embeddings.create(input=metadata_content, model=embedding_model)
+            embedding = response.data[0].embedding
+            new_df_entries.append({'section': actual_section, 'n_tokens': len(encoding.encode(metadata_content)), 'embedding': embedding})
 
         else:
             if n_tokens < OPENAI_EMBEDDING_MAXTOKENS:
-                new_df_entries.append({'section': section, 'n_tokens': n_tokens, 'embedding': get_embedding(section, engine=embedding_model)})
+                response = client.embeddings.create(input=section, model=embedding_model)
+                embedding = response.data[0].embedding
+                new_df_entries.append({'section': section, 'n_tokens': n_tokens, 'embedding': embedding})
             else:
                 for new_section in split_and_embed(section, encoding):
-                    new_df_entries.append({'section': new_section, 'n_tokens': len(encoding.encode(new_section)), 'embedding': get_embedding(new_section, engine=embedding_model)})
+                    response = client.embeddings.create(input=new_section, model=embedding_model)
+                    emberdding = response.data[0].embedding
+                    new_df_entries.append({'section': new_section, 'n_tokens': len(encoding.encode(new_section)), 'embedding': embedding})
 
     df_new = pd.DataFrame(new_df_entries)
 
+    ensure_directory_exists('embedded')
+    
     embd_path = os.path.join('embedded', file_name)
     df_new.to_csv(embd_path, index=False, encoding='utf-8')
 
+def ensure_directory_exists(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
-# section_to_embed('csv file from md2csv')
+section_to_embed('part15_whole.csv')

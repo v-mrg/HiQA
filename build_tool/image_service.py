@@ -29,8 +29,12 @@ def load_pdf(kb_name, filename, dpi=300, skip_page_front=0, skip_page_back=1, sk
     :param file:
     :return:
     """
+    
+    
+    directory = os.path.join(r'', kb_name)
 
-    directory = os.path.join(r'C:\Users\cxy\PycharmProjects\HiQA\datasets', kb_name)
+    ensure_directory_exists(directory)
+
     file_path = os.path.join(directory, 'pdfs', filename)
     doc = fitz.open(file_path)
 
@@ -233,6 +237,10 @@ def build_index(kb_name, lang='CN'):
 #     img = Image.open('images/' + base_name + '/' + image_name + '.png')
 #     image_title = result[1].split('\n')[0].split(':')[1]
 #     img.show(title=image_title)
+
+def ensure_directory_exists(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
 # Examples of using API.
 # query = "CA-IF428x是什么"

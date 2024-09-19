@@ -12,8 +12,9 @@ embedding_model = "text-embedding-ada-002"
 embedding_encoding = "cl100k_base"  # this the encoding for text-embedding-ada-002
 # set openai
 load_dotenv()
-openai.api_key = os.environ.get('OPENAI_API_KEY')
-openai.api_base = os.environ.get('OPENAI_API_BASE')
+client = openai.OpenAI(api_key= os.getenv('OPENAI_API_KEY'))
+# openai.api_key = os.environ.get('OPENAI_API_KEY', "")
+# openai.api_base = os.environ.get('OPENAI_API_BASE')
 
 
 def extract_text_from_pdf(file_name):
@@ -103,6 +104,9 @@ def parse_markdown(file_content):
     lines = file_content.strip().split('\n')
     sections = []
     current_section = []
+    hierarchy = []
+    # current_subpart = ""
+    # current_section_num = ""
 
     for line in lines:
         while line.__contains__('##'):
@@ -142,15 +146,43 @@ def parse_markdown(file_content):
                     sections.append(section_text)
                 current_section.clear()
             current_section = [line]
-            # # Determine hierarchy level
-            # hierarchy_info = line[2:].split(".")
-            # level = len(hierarchy_info)-1  # Level is determined by the number of dot-separated numbers
-            # # Update hierarchy based on current level
-            # if level <= len(hierarchy):
-            #     hierarchy = hierarchy[:level-1]
-            # hierarchy.append(hierarchy_info[-1].strip())
-            # desc = "[desc] " + doc_title + " __ " + " __ ".join(hierarchy) + " [desc]"
-            # current_section.append(desc)
+
+            # # Extract subpart and section from the line
+            # parts = line[2:].split()
+            # for part in parts:
+            #     if part.startswith("Subpart"):
+            #         current_subpart = part
+            #     elif part.startswith("§"):
+            #         current_section = part
+
+            # # Update hierarchy
+            # if current_subpart:
+            #     hierarchy = [current_subpart]
+            # if current_section:
+            #     hierarchy.append(current_section)
+            
+
+            # Determine hierarchy level
+            hierarchy_info = line[2:].split(".")
+            level = len(hierarchy_info)-1  # Level is determined by the number of dot-separated numbers
+            # Update hierarchy based on current level
+            if level <= len(hierarchy):
+                hierarchy = hierarchy[:level-1]
+            hierarchy.append(hierarchy_info[-1].strip())
+            desc = "[desc] " + "RADIO FREQUENCY DEVICES" + " __ " + " __ ".join(hierarchy) + " [desc]"
+            current_section.append(desc)
+
+            # # Update hierarchy
+            # hierarchy = []
+            # if current_subpart:
+            #     hierarchy.append(current_subpart)
+            # if current_section_num:
+            #     hierarchy.append(current_section_num)
+
+            # # Create the description with Subpart_section format
+            # hierarchy_str = "_".join([h for h in hierarchy if h])
+            # desc = f"[desc] RADIO FREQUENCY DEVICES __ {hierarchy_str} [desc]"
+            # current_section = [line, desc]
         else:
             if line == '```':
                 continue
@@ -158,14 +190,14 @@ def parse_markdown(file_content):
                 current_section.append(line)
 
     # Save the last section if not empty
-    # if current_section:
-    #     sections.append("\n".join(current_section))
+    if current_section:
+        sections.append("\n".join(current_section))
 
     return sections
 
 
 def pdf2md(file_name):
-    file_path = os.path.join('pdfs', file_name + '.pdf')
+    file_path = os.path.join(file_name + '.pdf')
     text = extract_text_from_pdf(file_path)
 
     text_len = len(text)
@@ -209,15 +241,16 @@ def pdf2md(file_name):
             ]
 
         # gpt-4-32k works better than preview version in terms of understanding instruction
-        result = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             # model="gpt-3.5-turbo-16k",
             # model='gpt-4-32k',
             model='gpt-4-turbo-preview',
             # max_tokens=4000,
             messages=message,
+        )
 
-            stream=False
-        )['choices'][0]['message']['content']
+        result = response.choices[0].message.content
+
         if not title_chunk:
             result = '# ' + file_name + '\n\n' + result
             title_chunk = True
@@ -239,20 +272,31 @@ def pdf2md(file_name):
     for key, value in full_contents.items():
         full_markdown += value + '\n\n'
 
-    with open(os.path.join('mds', file_name + '.md'), 'w', encoding='utf-8') as f:
+    # Create the 'mds' directory if it doesn't exist
+    ensure_directory_exists('mds')
+
+    # Use os.path.basename to get just the filename without the path
+    output_filename = os.path.basename(file_name) + '.md'
+    output_path = os.path.join('mds', output_filename)
+
+    with open(output_path, 'w', encoding='utf-8') as f:
         f.write(full_markdown)
+        
     return full_markdown
 
+def ensure_directory_exists(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
 # running pdf2md to convert a pdf file to a well-structured markdown
 if __name__ == '__main__':
     start_time = time.time()
+
     # TODO: change path
-    md = pdf2md('/home/wairimu/fcc_sec_47')
+    filename = 'part15_split'
+    md = pdf2md('./pdf/' + filename)
     # # save to local
-    # with open('test.md', 'w', encoding='utf-8') as f:
-    #     f.write(md)
+    ensure_directory_exists('mds')
+    with open('mds/part15_split.md', 'w', encoding='utf-8') as f:
+        f.write(md)
     print(time.time() - start_time)
-
-
-

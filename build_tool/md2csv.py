@@ -71,6 +71,11 @@ def list_md_files(directory: str):
 def md2sections(file_name: str):
     name = os.path.splitext(file_name)[0]
     directory = os.path.join('sections')
+
+    # Check if the 'sections' directory exists, if not, create it
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
     file_path = os.path.join('mds', file_name)
 
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -80,4 +85,4 @@ def md2sections(file_name: str):
         df.to_csv(directory + "/" + name + '.csv', index=False, encoding='utf-8')
 
 
-# md2sections('markdown file from pdf2md')
+md2sections('part15_whole.md')
